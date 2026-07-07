@@ -51,10 +51,10 @@
     let list = state.all;
     if (state.domain !== "all") list = list.filter((s) => s.domain === state.domain);
     if (q) {
-      list = list.filter((s) => {
-        const hay = (s.id + " " + (s.domainTitle || "") + " " + (s.text || "")).toLowerCase();
-        return hay.includes(q);
-      });
+      // 本文(text)のみを検索対象にする。
+      // 分野名(domainTitle)やID(A-001等)を含めると、本文に無いキーワードでも
+      // 分野まるごと・ID一致で誤ヒットするため除外。
+      list = list.filter((s) => (s.text || "").toLowerCase().includes(q));
     }
     state.results = list;
     render(list);
