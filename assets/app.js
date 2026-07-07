@@ -21,11 +21,15 @@
 
   let lbIndex = -1;
 
+  // 全角英数(ＮＩＳＡ等)や半角カナでも一致するよう NFKC 正規化 + 小文字化
+  const norm = (t) => (t || "").normalize("NFKC").toLowerCase();
+
   // --- load data ---
   fetch("data/slides.json")
     .then((r) => r.json())
     .then((data) => {
       state.all = data.slides || [];
+      state.all.forEach((s) => { s._n = norm(s.text); }); // 検索用に事前正規化
       el.total.textContent = state.all.length;
       const done = state.all.filter((s) => s.text && s.text.length > 0).length;
       const total = state.all.length;
@@ -47,14 +51,14 @@
 
   // --- filtering ---
   function apply() {
-    const q = state.q.trim().toLowerCase();
+    const q = norm(state.q.trim());
     let list = state.all;
     if (state.domain !== "all") list = list.filter((s) => s.domain === state.domain);
     if (q) {
       // 本文(text)のみを検索対象にする。
       // 分野名(domainTitle)やID(A-001等)を含めると、本文に無いキーワードでも
       // 分野まるごと・ID一致で誤ヒットするため除外。
-      list = list.filter((s) => (s.text || "").toLowerCase().includes(q));
+      list = list.filter((s) => (s._n || "").includes(q));
     }
     state.results = list;
     render(list);
