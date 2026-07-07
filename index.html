@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FP2級 完全講義 検索</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark">FP2</span>
+      <div class="brand-text">
+        <h1>FP2級 完全講義 検索</h1>
+        <p class="subtitle">6分野 <span id="total-count">—</span>枚のスライドから横断検索</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="search-bar">
+  <div class="search-inner">
+    <div class="search-input-wrap">
+      <input type="search" id="q" placeholder="キーワードで検索（例：可処分所得、生命保険料控除、贈与税）" autocomplete="off">
+      <button id="clear-btn" class="clear-btn" aria-label="クリア" hidden>×</button>
+    </div>
+    <div id="ocr-warning" class="ocr-warning">
+      ⚠ 現在はスライド画像のみ登録済みです。全文検索は文字起こし（OCR）データ投入後に有効になります。
+    </div>
+  </div>
+</div>
+
+<nav class="domain-tabs" id="domain-tabs">
+  <button class="tab active" data-domain="all">すべて</button>
+  <button class="tab" data-domain="A">ライフプランニング</button>
+  <button class="tab" data-domain="B">リスク管理</button>
+  <button class="tab" data-domain="C">金融資産運用</button>
+  <button class="tab" data-domain="D">タックス</button>
+  <button class="tab" data-domain="E">不動産</button>
+  <button class="tab" data-domain="F">相続・事業承継</button>
+</nav>
+
+<main class="content">
+  <div class="result-meta" id="result-meta"></div>
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" hidden>該当するスライドがありません。</div>
+</main>
+
+<div id="lightbox" class="lightbox" hidden>
+  <button class="lb-close" id="lb-close" aria-label="閉じる">×</button>
+  <button class="lb-nav lb-prev" id="lb-prev" aria-label="前へ">‹</button>
+  <figure class="lb-figure">
+    <img id="lb-img" src="" alt="">
+    <figcaption id="lb-cap"></figcaption>
+  </figure>
+  <button class="lb-nav lb-next" id="lb-next" aria-label="次へ">›</button>
+</div>
+
+<footer class="site-footer">
+  <p>FP2級完全講義 2025 / 全6分野 学習用検索インデックス</p>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
