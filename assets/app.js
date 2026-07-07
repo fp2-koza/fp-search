@@ -1,6 +1,6 @@
 // FP2級 完全講義 検索 — client-side search over slide manifest
 (function () {
-  const state = { all: [], filtered: [], domain: "all", q: "", results: [] };
+  const state = { all: [], filtered: [], domain: "all", q: "", results: [], terms: [] };
 
   const el = {
     grid: document.getElementById("grid"),
@@ -24,12 +24,26 @@
   // 全角英数(ＮＩＳＡ等)や半角カナでも一致するよう NFKC 正規化 + 小文字化
   const norm = (t) => (t || "").normalize("NFKC").toLowerCase();
 
+  // 検索用インデックス: 正規化文字列 _n と「正規化後の位置→元テキスト位置」対応表 _map。
+  // ハイライト表示で元テキストの正しい位置に <mark> を付けるために使う。
+  function buildIndex(s) {
+    const text = s.text || "";
+    let n = "";
+    const map = [];
+    for (let i = 0; i < text.length; i++) {
+      const c = norm(text[i]);
+      for (let k = 0; k < c.length; k++) { n += c[k]; map.push(i); }
+    }
+    s._n = n;
+    s._map = map;
+  }
+
   // --- load data ---
   fetch("data/slides.json")
     .then((r) => r.json())
     .then((data) => {
       state.all = data.slides || [];
-      state.all.forEach((s) => { s._n = norm(s.text); }); // 検索用に事前正規化
+      state.all.forEach(buildIndex); // 検索用に事前正規化
       el.total.textContent = state.all.length;
       const done = state.all.filter((s) => s.text && s.text.length > 0).length;
       const total = state.all.length;
@@ -51,17 +65,58 @@
 
   // --- filtering ---
   function apply() {
-    const q = norm(state.q.trim());
+    // スペース(全角含む)区切りで AND 検索。NFKCで全角英数・半角カナも一致。
+    const terms = norm(state.q.trim()).split(/\s+/).filter(Boolean);
     let list = state.all;
     if (state.domain !== "all") list = list.filter((s) => s.domain === state.domain);
-    if (q) {
+    if (terms.length) {
       // 本文(text)のみを検索対象にする。
       // 分野名(domainTitle)やID(A-001等)を含めると、本文に無いキーワードでも
       // 分野まるごと・ID一致で誤ヒットするため除外。
-      list = list.filter((s) => (s._n || "").includes(q));
+      list = list.filter((s) => terms.every((t) => s._n.includes(t)));
     }
+    state.terms = terms;
     state.results = list;
     render(list);
+  }
+
+  const escapeHtml = (t) =>
+    t.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // 最初の一致箇所の前後を抜き出し、全キーワードを <mark> でハイライトしたHTMLを返す
+  function snippetHtml(s, terms) {
+    const text = s.text || "";
+    const first = s._n.indexOf(terms[0]);
+    if (first < 0) return "";
+    const oStart = s._map[first];
+    const from = Math.max(0, oStart - 20);
+    const to = Math.min(text.length, oStart + 60);
+    // 表示窓と重なる一致範囲を全キーワード分収集（元テキスト上の位置で）
+    const ranges = [];
+    for (const t of terms) {
+      let idx = 0, guard = 0;
+      while ((idx = s._n.indexOf(t, idx)) !== -1 && guard++ < 20) {
+        const a = s._map[idx];
+        const b = s._map[idx + t.length - 1] + 1;
+        if (b > from && a < to) ranges.push([Math.max(a, from), Math.min(b, to)]);
+        idx += t.length;
+      }
+    }
+    ranges.sort((x, y) => x[0] - y[0]);
+    const merged = [];
+    for (const r of ranges) {
+      const last = merged[merged.length - 1];
+      if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+      else merged.push([r[0], r[1]]);
+    }
+    let html = from > 0 ? "…" : "";
+    let pos = from;
+    for (const [a, b] of merged) {
+      html += escapeHtml(text.slice(pos, a)) + "<mark>" + escapeHtml(text.slice(a, b)) + "</mark>";
+      pos = b;
+    }
+    html += escapeHtml(text.slice(pos, to)) + (to < text.length ? "…" : "");
+    return html;
   }
 
   function render(list) {
@@ -74,11 +129,13 @@
     list.forEach((s, i) => {
       const card = document.createElement("div");
       card.className = "card";
+      const snip = state.terms && state.terms.length ? snippetHtml(s, state.terms) : "";
       card.innerHTML = `
         <img class="card-thumb" loading="lazy" src="${s.img}" alt="${s.id}">
         <div class="card-body">
           <span class="card-domain">${s.domain}</span>
           <span class="card-id">${s.id} ・ p${s.page}</span>
+          ${snip ? `<p class="card-snippet">${snip}</p>` : ""}
         </div>`;
       card.addEventListener("click", () => openLightbox(i));
       frag.appendChild(card);
