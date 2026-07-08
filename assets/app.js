@@ -14,6 +14,7 @@
     lb: document.getElementById("lightbox"),
     lbImg: document.getElementById("lb-img"),
     lbCap: document.getElementById("lb-cap"),
+    lbNote: document.getElementById("lb-note"),
     lbClose: document.getElementById("lb-close"),
     lbPrev: document.getElementById("lb-prev"),
     lbNext: document.getElementById("lb-next"),
@@ -39,11 +40,14 @@
   }
 
   // --- load data ---
-  fetch("data/slides.json")
-    .then((r) => r.json())
-    .then((data) => {
+  // notes.json = 制度改正の補足（スライド画像は2025年度版のため、現行制度との差分を注記）
+  Promise.all([
+    fetch("data/slides.json").then((r) => r.json()),
+    fetch("data/notes.json").then((r) => r.json()).catch(() => ({})),
+  ])
+    .then(([data, notes]) => {
       state.all = data.slides || [];
-      state.all.forEach(buildIndex); // 検索用に事前正規化
+      state.all.forEach((s) => { buildIndex(s); s.note = notes[s.id] || ""; }); // 検索用に事前正規化+注記付与
       el.total.textContent = state.all.length;
       const done = state.all.filter((s) => s.text && s.text.length > 0).length;
       const total = state.all.length;
@@ -135,6 +139,7 @@
         <div class="card-body">
           <span class="card-domain">${s.domain}</span>
           <span class="card-id">${s.id} ・ p${s.page}</span>
+          ${s.note ? `<span class="card-note-badge">⚠ 制度改正あり</span>` : ""}
           ${snip ? `<p class="card-snippet">${snip}</p>` : ""}
         </div>`;
       card.addEventListener("click", () => openLightbox(i));
@@ -150,6 +155,8 @@
     if (!s) return;
     el.lbImg.src = s.img;
     el.lbCap.textContent = `${s.domainTitle}　${s.id}（p${s.page}）`;
+    el.lbNote.textContent = s.note || "";
+    el.lbNote.hidden = !s.note;
     el.lb.hidden = false;
     document.body.style.overflow = "hidden";
   }
