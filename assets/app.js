@@ -15,6 +15,9 @@
     lbImg: document.getElementById("lb-img"),
     lbCap: document.getElementById("lb-cap"),
     lbNote: document.getElementById("lb-note"),
+    lbZoom: document.getElementById("lb-zoom"),
+    lbText: document.getElementById("lb-text"),
+    lbTextBtn: document.getElementById("lb-text-btn"),
     lbClose: document.getElementById("lb-close"),
     lbPrev: document.getElementById("lb-prev"),
     lbNext: document.getElementById("lb-next"),
@@ -149,27 +152,61 @@
   }
 
   // --- lightbox ---
-  function openLightbox(i) {
-    lbIndex = i;
-    const s = state.results[i];
+  let textMode = false; // 「文字で読む」表示中か（前後送りしても維持する）
+  let zoomed = false;
+
+  function setZoom(on) {
+    if (on && (!el.lbImg.complete || !el.lbImg.naturalWidth)) return; // 読み込み完了前は無視
+    zoomed = on;
+    el.lbZoom.classList.toggle("zoomed", on);
+    if (on) {
+      // 原寸(ネイティブ解像度)まで拡大。原寸が表示サイズ以下なら1.8倍
+      const w = Math.max(el.lbImg.naturalWidth, el.lbImg.clientWidth * 1.8);
+      el.lbImg.style.width = w + "px";
+    } else {
+      el.lbImg.style.width = "";
+    }
+  }
+  function setTextMode(on) {
+    textMode = on;
+    el.lbZoom.hidden = on;
+    el.lbText.hidden = !on;
+    el.lbTextBtn.textContent = on ? "🖼 画像で見る" : "📖 文字で読む";
+  }
+  function renderLb() {
+    const s = state.results[lbIndex];
     if (!s) return;
     el.lbImg.src = s.img;
     el.lbCap.textContent = `${s.domainTitle}　${s.id}（p${s.page}）`;
     el.lbNote.textContent = s.note || "";
     el.lbNote.hidden = !s.note;
+    el.lbText.textContent = (s.text || "").replace(/。/g, "。\n");
+    setZoom(false);
+    setTextMode(textMode);
+  }
+  function openLightbox(i) {
+    lbIndex = i;
+    textMode = false;
+    renderLb();
     el.lb.hidden = false;
     document.body.style.overflow = "hidden";
+    // スマホの「戻る」で閉じられるよう履歴を1つ積む
+    if (!history.state || !history.state.lb) history.pushState({ lb: 1 }, "");
   }
-  function closeLightbox() {
+  function closeLightbox(fromPop) {
     el.lb.hidden = true;
     document.body.style.overflow = "";
+    if (!fromPop && history.state && history.state.lb) history.back();
   }
   function step(d) {
     const n = state.results.length;
     if (!n) return;
     lbIndex = (lbIndex + d + n) % n;
-    openLightbox(lbIndex);
+    renderLb();
   }
+  window.addEventListener("popstate", () => {
+    if (!el.lb.hidden) closeLightbox(true);
+  });
 
   // --- events ---
   el.q.addEventListener("input", (e) => {
@@ -191,14 +228,28 @@
     [...el.tabs.children].forEach((b) => b.classList.toggle("active", b === btn));
     apply();
   });
-  el.lbClose.addEventListener("click", closeLightbox);
+  el.lbClose.addEventListener("click", () => closeLightbox());
   el.lbPrev.addEventListener("click", () => step(-1));
   el.lbNext.addEventListener("click", () => step(1));
   el.lb.addEventListener("click", (e) => { if (e.target === el.lb) closeLightbox(); });
+  el.lbTextBtn.addEventListener("click", () => setTextMode(!textMode));
+  el.lbImg.addEventListener("click", () => setZoom(!zoomed)); // タップで原寸ズーム⇔戻す
   document.addEventListener("keydown", (e) => {
     if (el.lb.hidden) return;
     if (e.key === "Escape") closeLightbox();
     if (e.key === "ArrowLeft") step(-1);
     if (e.key === "ArrowRight") step(1);
   });
+
+  // スワイプで前後送り（ズーム中はパン操作を優先して無効化）
+  let swX = 0, swY = 0;
+  el.lb.addEventListener("touchstart", (e) => {
+    swX = e.touches[0].clientX; swY = e.touches[0].clientY;
+  }, { passive: true });
+  el.lb.addEventListener("touchend", (e) => {
+    if (el.lb.hidden || zoomed) return;
+    const dx = e.changedTouches[0].clientX - swX;
+    const dy = e.changedTouches[0].clientY - swY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) step(dx < 0 ? 1 : -1);
+  }, { passive: true });
 })();

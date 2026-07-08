@@ -97,9 +97,22 @@ body{
   display:flex;align-items:center;justify-content:center;
 }
 .lightbox[hidden]{display:none}
-.lb-figure{margin:0;max-width:90vw;max-height:88vh;text-align:center}
-#lb-img{max-width:90vw;max-height:80vh;object-fit:contain;background:#fff;border-radius:8px}
+.lb-figure{margin:0;max-width:90vw;max-height:92vh;text-align:center;overflow-y:auto}
+.lb-zoom{overflow:auto;max-width:90vw;max-height:74vh;border-radius:8px;-webkit-overflow-scrolling:touch}
+#lb-img{display:block;max-width:90vw;max-height:74vh;object-fit:contain;background:#fff;border-radius:8px;cursor:zoom-in;margin:0 auto}
+.lb-zoom.zoomed #lb-img{max-width:none;max-height:none;cursor:zoom-out;margin:0}
+.lb-text{
+  width:min(90vw,720px);max-height:70vh;overflow:auto;text-align:left;
+  background:#fff;color:var(--text);border-radius:8px;padding:16px 18px;
+  font-size:14.5px;line-height:1.9;white-space:pre-wrap;
+  -webkit-user-select:text;user-select:text;margin:0 auto;
+}
 #lb-cap{color:#fff;margin-top:12px;font-size:14px}
+.lb-text-btn{
+  margin-top:10px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);
+  color:#fff;border-radius:999px;padding:7px 18px;font-size:13px;cursor:pointer;
+}
+.lb-text-btn:hover{background:rgba(255,255,255,.28)}
 .lb-close{position:absolute;top:18px;right:24px;background:none;border:none;color:#fff;
   font-size:34px;cursor:pointer;line-height:1}
 .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);
@@ -113,5 +126,10 @@ body{
 @media(max-width:640px){
   .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
   .brand-text h1{font-size:17px}
-  .lb-nav{width:40px;height:64px;font-size:30px}
+  .lb-nav{width:40px;height:64px;font-size:30px;background:rgba(255,255,255,.10)}
+  /* 分野タブは折り返さず横スクロール1行に */
+  .domain-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .domain-tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto}
+  .lb-text{font-size:14px;padding:14px 14px}
 }
